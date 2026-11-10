@@ -1,0 +1,10 @@
+config KEYBOARD_WRITER
+    bool "Start the bootloader when the Keyboard Writer app asks over USB"
+    default y
+    depends on DT_HAS_ZEPHYR_CDC_ACM_UART_ENABLED && USB_DEVICE_STACK && RETENTION_BOOT_MODE
+    select SERIAL
+    select UART_LINE_CTRL
+    help
+      Uses the USB serial port from keyboard_writer.dtsi to tell the app
+      which device is plugged in and to start its bootloader, instead of a
+      double-tap on reset. See src/usb_trigger.c.

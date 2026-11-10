@@ -1,0 +1,6 @@
+/* The USB serial port the Keyboard Writer app talks to (src/usb_trigger.c). */
+&zephyr_udc0 {
+    keyboard_writer_port: keyboard_writer_port {
+        compatible = "zephyr,cdc-acm-uart";
+    };
+};

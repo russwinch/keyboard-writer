@@ -1,0 +1,6 @@
+# Makes this repo a ZMK (Zephyr) module: the firmware half lives in firmware/.
+build:
+  cmake: firmware
+  kconfig: firmware/Kconfig
+  settings:
+    dts_root: firmware
