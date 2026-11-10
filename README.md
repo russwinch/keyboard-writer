@@ -132,7 +132,8 @@ full flash against pretend drives (`smoke.sh`), uploading screenshots.
 
 - The app has been run end to end in CI against pretend drives, and the
   module compiles for `nice_nano` and `xiao_ble`.
-- The builds list is tested against made-up release data only: the config
-  repo doesn't publish releases yet, so it has never been run for real.
+- The config repo publishes its builds as releases, and the list and the
+  zip can be fetched from them without a login. The app's own fetching and
+  its builds menu have only been compiled and unit tested, not run.
 - Neither has been tried on a real keyboard yet, so the USB conversation
   between them is untested.
