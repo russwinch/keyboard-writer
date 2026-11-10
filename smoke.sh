@@ -34,6 +34,14 @@ plug() {
     exit 1
 }
 
+# With no firmware named it asks the config repo for its builds. That needs
+# the network, so it is only a picture, not a check.
+"$app" --volumes "$work/volumes" --keyboard waterfowl-dongle &
+builds=$!
+sleep 8
+shot 0-builds
+kill $builds
+
 "$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset &
 setup=$!
 sleep 4
