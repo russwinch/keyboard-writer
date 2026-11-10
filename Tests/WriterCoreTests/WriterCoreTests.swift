@@ -200,6 +200,47 @@ final class WriterCoreTests: XCTestCase {
         XCTAssertNil(USBSerialPorts.name(in: "ok"))
         XCTAssertNil(USBSerialPorts.name(in: ""))
     }
+
+    // MARK: Builds from the config repo
+
+    func testBuildsFromReleases() throws {
+        func release(_ id: Int, _ name: String, at time: String, prerelease: Bool = false, draft: Bool = false, asset: String? = "firmware.zip") -> String {
+            let assets = asset.map {
+                #"[{"name": "\#($0)", "browser_download_url": "https://github.com/o/r/releases/download/build-\#(id)/\#($0)"}]"#
+            } ?? "[]"
+            return #"""
+                {"id": \#(id), "name": "\#(name)", "tag_name": "build-\#(id)", "draft": \#(draft),
+                 "prerelease": \#(prerelease), "created_at": "\#(time)", "published_at": "\#(time)",
+                 "assets": \#(assets), "something_else": null}
+                """#
+        }
+        let json = "[" + [
+            release(1, "main · Older", at: "2026-11-01T10:00:00Z"),
+            release(4, "branch · Newest", at: "2026-11-04T10:00:00Z", prerelease: true),
+            release(3, "main · Newer", at: "2026-11-03T10:00:00Z"),
+            release(5, "main · Draft", at: "2026-11-05T10:00:00Z", draft: true),
+            release(6, "main · No firmware", at: "2026-11-06T10:00:00Z", asset: nil),
+            release(2, "", at: "2026-11-02T10:00:00Z"),
+        ].joined(separator: ",") + "]"
+
+        let builds = try Builds.parse(Data(json.utf8))
+        XCTAssertEqual(builds.map(\.id), [4, 3, 2, 1])
+        XCTAssertEqual(builds.map(\.title), ["branch · Newest", "main · Newer", "build-2", "main · Older"])
+        XCTAssertEqual(builds[0].zip.absoluteString, "https://github.com/o/r/releases/download/build-4/firmware.zip")
+        XCTAssertFalse(builds[0].main)
+        XCTAssertEqual(Builds.preferred(builds)?.id, 3)
+        XCTAssertEqual(Builds.preferred(Array(builds.prefix(1)))?.id, 4)
+        XCTAssertNil(Builds.preferred([]))
+        XCTAssertEqual(try Builds.parse(Data("[]".utf8)), [])
+    }
+
+    func testDownloadedBuildIsKept() async throws {
+        let build = Build(id: 7, title: "main · Here already", date: Date(), main: true,
+                          zip: URL(string: "https://example.invalid/firmware.zip")!)
+        try Data("zip".utf8).write(to: scratch.appendingPathComponent("build-7.zip"))
+        let file = try await Builds.download(build, into: scratch)
+        XCTAssertEqual(try Data(contentsOf: file), Data("zip".utf8))
+    }
 }
 
 actor Recorder {

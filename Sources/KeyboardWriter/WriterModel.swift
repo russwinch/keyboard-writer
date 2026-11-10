@@ -13,14 +13,26 @@ final class WriterModel: ObservableObject {
         case failed(String)
     }
 
+    /// Where the firmware comes from.
+    enum Source: Equatable, Sendable {
+        /// A CI firmware .zip, or a folder of .uf2 files.
+        case file(URL)
+        /// A build published by the config repo, downloaded when flashing starts.
+        case build(Build)
+    }
+
     let targets: Targets
+    /// The config repo whose builds are offered, as "owner/name".
+    private(set) var repo = UserDefaults.standard.string(forKey: "repo") ?? Builds.defaultRepo
 
     @Published private(set) var keyboard: Keyboard
     /// Names of the devices to flash (all of them unless some are clicked off).
     @Published private(set) var selected: Set<String>
     @Published var reset = false
-    /// A CI firmware .zip, or a folder of .uf2 files.
-    @Published var firmware: URL?
+    @Published var source: Source?
+    /// The config repo's builds, newest first (empty until they have loaded).
+    @Published private(set) var builds: [Build] = []
+    @Published private(set) var buildsProblem: String?
 
     @Published private(set) var phase: Phase = .setup
     @Published private(set) var plan: [Step] = []
@@ -30,13 +42,16 @@ final class WriterModel: ObservableObject {
     private var roots = Drives.volumes
     private var task: Task<Void, Never>?
     private var startWhenShown = false
+    /// False once the person (or smoke.sh) has said which firmware to use.
+    private var sourceIsDefault = true
 
     init() {
         targets = Self.loadTargets()
         keyboard = targets.keyboards[0]
         selected = Set(targets.keyboards[0].devices.map(\.name))
-        firmware = Firmware.newestDownload()
+        source = Firmware.newestDownload().map(Source.file)
         readArguments()
+        if sourceIsDefault { loadBuilds() }
     }
 
     /// targets.json is copied into the .app by build.sh; from `swift run` it is read from the repo.
@@ -63,8 +78,10 @@ final class WriterModel: ObservableObject {
                 }
             case "--firmware":
                 if let path = arguments.next() {
-                    firmware = URL(fileURLWithPath: path)
+                    use(.file(URL(fileURLWithPath: path)))
                 }
+            case "--repo":
+                if let name = arguments.next() { repo = name }
             case "--reset": reset = true
             case "--start": startWhenShown = true
             case "--volumes":
@@ -89,7 +106,31 @@ final class WriterModel: ObservableObject {
         }
     }
 
-    var canStart: Bool { firmware != nil && !selected.isEmpty }
+    var canStart: Bool { source != nil && !selected.isEmpty }
+
+    func use(_ source: Source) {
+        self.source = source
+        sourceIsDefault = false
+    }
+
+    var newestDownload: URL? { Firmware.newestDownload() }
+
+    /// Asks the config repo for its builds. Until the person chooses
+    /// something themselves, the newest build from main is the one used.
+    func loadBuilds() {
+        let repo = repo
+        Task {
+            do {
+                builds = try await Builds.list(repo: repo)
+                buildsProblem = nil
+                if sourceIsDefault, let build = Builds.preferred(builds) {
+                    source = .build(build)
+                }
+            } catch {
+                buildsProblem = error.localizedDescription
+            }
+        }
+    }
 
     func chooseFile() {
         let panel = NSOpenPanel()
@@ -98,7 +139,7 @@ final class WriterModel: ObservableObject {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         if panel.runModal() == .OK, let url = panel.url {
-            firmware = url
+            use(.file(url))
         }
     }
 
@@ -114,16 +155,21 @@ final class WriterModel: ObservableObject {
     }
 
     func start() {
-        guard let firmware, canStart else { return }
+        guard let source, canStart else { return }
         let keyboard = keyboard, selected = selected, reset = reset
         plan = []
         current = 0
         phase = .preparing
         task = Task {
             do {
-                // Unzipping blocks, so keep it off the main thread.
-                let plan = try await Task.detached { () throws -> [Step] in
-                    try Firmware.plan(
+                // Downloading and unzipping take a while, so keep them off the main thread.
+                let plan = try await Task.detached { () async throws -> [Step] in
+                    let firmware: URL
+                    switch source {
+                    case .file(let url): firmware = url
+                    case .build(let build): firmware = try await Builds.download(build)
+                    }
+                    return try Firmware.plan(
                         keyboard: keyboard, only: selected, reset: reset, files: Firmware.unpack(firmware))
                 }.value
                 guard !Task.isCancelled else { return }

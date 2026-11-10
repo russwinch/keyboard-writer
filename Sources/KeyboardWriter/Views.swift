@@ -77,20 +77,60 @@ struct FirmwareRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(model.firmware?.lastPathComponent ?? "No firmware chosen")
+                Text(title)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                if let firmware = model.firmware {
-                    Text("From \(Firmware.modified(firmware).formatted(.relative(presentation: .named)))")
+                if let detail {
+                    Text(detail)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
             Spacer(minLength: 8)
-            Button("Choose…") { model.chooseFile() }
+            Menu("Choose…") {
+                if model.builds.isEmpty {
+                    Text(model.buildsProblem ?? "No builds from \(model.repo) yet")
+                } else {
+                    Section("Builds from \(model.repo)") {
+                        ForEach(model.builds) { build in
+                            Button(verbatim("\(build.title) (\(ago(build.date)))")) { model.use(.build(build)) }
+                        }
+                    }
+                }
+                Divider()
+                if let download = model.newestDownload {
+                    Button(verbatim("\(download.lastPathComponent) in Downloads")) { model.use(.file(download)) }
+                }
+                Button("Choose a File…") { model.chooseFile() }
+            }
+            .fixedSize()
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.quaternary))
+    }
+
+    private var title: String {
+        switch model.source {
+        case .build(let build)?: return build.title
+        case .file(let url)?: return url.lastPathComponent
+        case nil: return "No firmware chosen"
+        }
+    }
+
+    private var detail: String? {
+        switch model.source {
+        case .build(let build)?: return "Built \(ago(build.date)) · \(model.repo)"
+        case .file(let url)?: return "From \(ago(Firmware.modified(url)))"
+        case nil: return model.buildsProblem
+        }
+    }
+
+    /// A plain String, so a commit subject isn't read as Markdown.
+    private func verbatim(_ text: String) -> String { text }
+
+    private func ago(_ date: Date) -> String {
+        date.formatted(.relative(presentation: .named))
     }
 }
 
