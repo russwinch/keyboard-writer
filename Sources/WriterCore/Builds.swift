@@ -75,6 +75,11 @@ public enum Builds {
     public static func list(repo: String) async throws -> [Build] {
         var request = URLRequest(url: listURL(repo: repo))
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        // Not needed for a public repo, but GitHub allows far more requests
+        // an hour with one than without (CI's shared machines need that).
+        if let token = ProcessInfo.processInfo.environment["GITHUB_TOKEN"], !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
         do {
             return try parse(try await fetch(request))
         } catch is DecodingError {

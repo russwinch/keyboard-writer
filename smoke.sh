@@ -35,7 +35,8 @@ plug() {
 }
 
 # With no firmware named it asks the config repo for its builds. That needs
-# the network, so it is only a picture, not a check.
+# the network (and GITHUB_TOKEN, on CI's shared machines), so it is only a
+# picture, not a check.
 "$app" --volumes "$work/volumes" --keyboard waterfowl-dongle &
 builds=$!
 sleep 8

@@ -26,6 +26,8 @@ jobs:
         run: ./build.sh
 
       - name: Run it against pretend drives
+        env:
+          GITHUB_TOKEN: ${{ github.token }}  # for the list of builds
         run: ./smoke.sh "$RUNNER_TEMP/screenshots"
 
       - name: TEMPORARY push the screenshots to a branch
