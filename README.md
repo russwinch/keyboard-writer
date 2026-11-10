@@ -14,7 +14,11 @@ It has two halves:
 A device whose firmware doesn't have the module yet (or is too broken to
 answer) still works: double-tap reset and the app carries on from there.
 
-<!-- pictures -->
+<p>
+  <img src="docs/setup.png" width="270" alt="Choosing the keyboard and the build">
+  <img src="docs/flashing.png" width="270" alt="Flashing: the left half is next">
+  <img src="docs/done.png" width="270" alt="All done">
+</p>
 
 ## The app
 

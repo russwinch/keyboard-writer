@@ -14,8 +14,6 @@ concurrency:
 jobs:
   build:
     runs-on: macos-15
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -29,15 +27,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}  # for the list of builds
         run: ./smoke.sh "$RUNNER_TEMP/screenshots"
-
-      - name: TEMPORARY push the screenshots to a branch
-        if: always()
-        run: |
-          cd "$RUNNER_TEMP/screenshots"
-          git init -q -b screenshots-tmp
-          git add .
-          git -c user.name=ci -c user.email=ci@example.invalid commit -qm screenshots
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" screenshots-tmp
 
       - name: Shrink the screenshots
         if: always()

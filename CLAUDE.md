@@ -31,13 +31,21 @@
 - The ZMK module (`firmware/`, `zephyr/module.yml`) is pulled into the config
   repo by `config/west.yml` there; a module change only reaches a keyboard
   once that repo builds with it.
+- The request for the list of builds carries `GITHUB_TOKEN` when that is set.
+  A public repo doesn't need it, but CI's shared machines run out of GitHub's
+  allowance for requests without a login, so the App workflow sets it.
 - Not yet tried on a real keyboard: the USB conversation between the app and
-  the module, and the app's fetching of builds, have only been run in CI
-  (pretend drives, unit tests). Say so plainly if asked how tested it is.
+  the module has only been run in CI against pretend drives. Of the builds
+  feature, CI shows the real list being fetched (the smoke run's first
+  screenshot) but never downloads a build. Say so plainly if asked how tested
+  it is.
 
 ## README
 
 - Keep it to what the app does and how to use it. No history, status notes or
   changelog; things like that belong here or in commit messages.
-- Its pictures are in `docs/`, cropped from the smoke run's `screenshots`
-  artifact. Replace them when the views change.
+- Its pictures are in `docs/`: the app's window cropped out of the smoke
+  run's screenshots (`0-builds`, `3-left`, `6-finished`), with the corners
+  rounded off. Replace them when the views change. A cloud session can't
+  download the `screenshots` artifact (its host is blocked), so get them
+  another way, e.g. a temporary workflow step that pushes them to a branch.
