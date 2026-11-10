@@ -14,7 +14,7 @@ It has two halves:
 A device whose firmware doesn't have the module yet (or is too broken to
 answer) still works: double-tap reset and the app carries on from there.
 
-Not yet tried on real hardware: see "State of things" below.
+<!-- pictures -->
 
 ## The app
 
@@ -47,44 +47,14 @@ Devices are flashed in the order listed.
 
 ### Builds from the config repo
 
-The app reads the config repo's GitHub releases, so it needs no login (the
-artifacts of an Actions run can't be downloaded without one, even from a
-public repo). Each release is one build: its name is what the list shows, its
-attached `.zip` holds the `.uf2` files, and builds of branches other than
-`main` are marked as prereleases.
+The app reads the config repo's GitHub releases, which need no login. Each
+release is one build: its name is what the list shows, its attached `.zip`
+holds the `.uf2` files, and builds of branches other than `main` are marked
+as prereleases.
 
-The config repo publishes them with one more job in
-`.github/workflows/build.yml`, after ZMK's own `build` job:
-
-```yaml
-  # One release per build, for Keyboard Writer to list and download.
-  release:
-    needs: build
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: read
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-    steps:
-      - name: Publish the firmware
-        run: |
-          gh run download "$GITHUB_RUN_ID" --name firmware --dir firmware
-          find firmware -name '*.uf2' -exec zip -q -j firmware.zip {} +
-          subject="$(gh api "repos/$GH_REPO/commits/$GITHUB_SHA" --jq '.commit.message | split("\n")[0]')"
-          tag="build-$GITHUB_RUN_NUMBER"
-          gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || true  # a re-run
-          if [ "$GITHUB_REF_NAME" = "${{ github.event.repository.default_branch }}" ]; then kind=--latest; else kind=--prerelease; fi
-          gh release create "$tag" firmware.zip --target "$GITHUB_SHA" $kind \
-            --title "$GITHUB_REF_NAME · $subject" --notes "Built from $GITHUB_SHA."
-
-      - name: Keep the newest 30
-        run: |
-          gh release list --limit 200 --json tagName --jq '.[30:][].tagName' |
-            xargs -r -n 1 gh release delete --yes --cleanup-tag
-```
+The config repo publishes them with a `release` job after ZMK's own `build`
+job; copy it from
+[zmk-config's build.yml](https://github.com/russwinch/zmk-config/blob/main/.github/workflows/build.yml).
 
 The app asks `russwinch/zmk-config`. To ask another repo:
 
@@ -127,13 +97,3 @@ into the bootloader.
 builds and tests on Linux too (`swift test`). `Sources/KeyboardWriter` is the
 SwiftUI app. The App workflow tests, builds, and runs the built app through a
 full flash against pretend drives (`smoke.sh`), uploading screenshots.
-
-## State of things
-
-- The app has been run end to end in CI against pretend drives, and the
-  module compiles for `nice_nano` and `xiao_ble`.
-- The config repo publishes its builds as releases, and the list and the
-  zip can be fetched from them without a login. The app's own fetching and
-  its builds menu have only been compiled and unit tested, not run.
-- Neither has been tried on a real keyboard yet, so the USB conversation
-  between them is untested.
