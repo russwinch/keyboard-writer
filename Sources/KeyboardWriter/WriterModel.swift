@@ -33,6 +33,7 @@ final class WriterModel: ObservableObject {
     /// The config repo's builds, newest first (empty until they have loaded).
     @Published private(set) var builds: [Build] = []
     @Published private(set) var buildsProblem: String?
+    @Published private(set) var loadingBuilds = false
 
     @Published private(set) var phase: Phase = .setup
     @Published private(set) var plan: [Step] = []
@@ -118,8 +119,11 @@ final class WriterModel: ObservableObject {
     /// Asks the config repo for its builds. Until the person chooses
     /// something themselves, the newest build from main is the one used.
     func loadBuilds() {
+        guard !loadingBuilds else { return }
+        loadingBuilds = true
         let repo = repo
         Task {
+            defer { loadingBuilds = false }
             do {
                 builds = try await Builds.list(repo: repo)
                 buildsProblem = nil

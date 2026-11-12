@@ -92,6 +92,7 @@ struct FirmwareRow: View {
                 if model.builds.isEmpty {
                     Text(model.buildsProblem ?? "No builds from \(model.repo) yet")
                 } else {
+                    if let problem = model.buildsProblem { Text(problem) }
                     Section("Builds from \(model.repo)") {
                         ForEach(model.builds) { build in
                             Button(verbatim("\(build.title) (\(ago(build.date)))")) { model.use(.build(build)) }
@@ -105,6 +106,20 @@ struct FirmwareRow: View {
                 Button("Choose a File…") { model.chooseFile() }
             }
             .fixedSize()
+            Button {
+                model.loadBuilds()
+            } label: {
+                if model.loadingBuilds {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: "arrow.clockwise")
+                }
+            }
+            .frame(width: 22, height: 22)
+            .buttonStyle(.borderless)
+            .disabled(model.loadingBuilds)
+            .help("Check \(model.repo) for new builds")
+            .accessibilityLabel(model.loadingBuilds ? "Checking for builds" : "Check for new builds")
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.quaternary))

@@ -2,7 +2,8 @@
 
 A small macOS app for flashing ZMK firmware onto a split keyboard (and its
 dongle). Plug the devices in, press Start, and each one is flashed in order
-with its own firmware. No double-tapping reset, no dragging files.
+with its own firmware. No double-tapping reset, no dragging files. It works
+with ZMK only: other firmware such as QMK is not supported.
 
 It has two halves:
 
@@ -37,6 +38,7 @@ The firmware is the newest build of `main` in the config repo, fetched when
 you press Start. "Choose…" lists the recent builds from every branch, and
 also takes a zip or a folder of `.uf2` files from this Mac. With no builds to
 offer (or no network) it uses the newest `firmware*.zip` in `~/Downloads`.
+The button beside "Choose…" checks for builds published since the app opened.
 See "Builds from the config repo" below for the config repo's side of this.
 
 "Reset settings first" flashes `settings_reset` before each device's firmware,
