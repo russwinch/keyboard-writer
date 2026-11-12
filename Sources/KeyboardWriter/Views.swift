@@ -17,6 +17,13 @@ struct ContentView: View {
         }
         .padding(28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .topTrailing) {
+            if model.phase == .setup, let update = model.update {
+                UpdateButton(release: update)
+                    .padding(.top, 4)
+                    .padding(.trailing, 12)
+            }
+        }
         .animation(.default, value: model.phase)
         .onAppear { model.shown() }
     }
@@ -68,6 +75,34 @@ struct SetupView: View {
             .keyboardShortcut(.defaultAction)
             .disabled(!model.canStart)
         }
+    }
+}
+
+/// Sits in the window's top margin, so the setup layout stays where it is.
+struct UpdateButton: View {
+    @EnvironmentObject private var model: WriterModel
+    let release: AppRelease
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let problem = model.updateProblem {
+                Text(problem)
+                    .foregroundStyle(.orange)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(problem)
+            }
+            if model.updating {
+                ProgressView().controlSize(.mini)
+                Text("Updating…").foregroundStyle(.secondary)
+            } else {
+                Button("Update to \(release.version.description)") { model.installUpdate() }
+                    .buttonStyle(.borderless)
+                    .help("Install Keyboard Writer \(release.version.description) and reopen it")
+            }
+        }
+        .font(.footnote)
+        .frame(maxWidth: 300, alignment: .trailing)
     }
 }
 

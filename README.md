@@ -30,7 +30,9 @@ answer) still works: double-tap reset and the app carries on from there.
 
 Either one puts `Keyboard Writer.app` into `/Applications`, so open it from
 Spotlight, Launchpad or the Dock. Releases are tagged `v1.<n>`; the app's
-About window shows which one is installed.
+About window shows which one is installed. When a newer release is out, an
+"Update to 1.<n>" button at the top of the window installs it and reopens the
+app, so `install.sh` is only needed the first time.
 
 Pick the keyboard, click a device to leave it out, and press Start.
 

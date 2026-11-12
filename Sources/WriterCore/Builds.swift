@@ -73,15 +73,8 @@ public enum Builds {
     }
 
     public static func list(repo: String) async throws -> [Build] {
-        var request = URLRequest(url: listURL(repo: repo))
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        // Not needed for a public repo, but GitHub allows far more requests
-        // an hour with one than without (CI's shared machines need that).
-        if let token = ProcessInfo.processInfo.environment["GITHUB_TOKEN"], !token.isEmpty {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
         do {
-            return try parse(try await fetch(request))
+            return try parse(try await fetch(request(listURL(repo: repo))))
         } catch is DecodingError {
             throw FlashError.tool("Couldn't read the list of builds from \(repo).")
         }
@@ -103,6 +96,18 @@ public enum Builds {
             .appendingPathComponent("keyboard-writer")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder
+    }
+
+    /// A GitHub API request.
+    static func request(_ url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        // Not needed for a public repo, but GitHub allows far more requests
+        // an hour with one than without (CI's shared machines need that).
+        if let token = ProcessInfo.processInfo.environment["GITHUB_TOKEN"], !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        return request
     }
 
     /// (URLSession's own async calls aren't in every Linux Foundation.)
