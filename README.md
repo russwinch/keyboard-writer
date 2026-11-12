@@ -23,9 +23,13 @@ answer) still works: double-tap reset and the app carries on from there.
 ## The app
 
 ```sh
-./build.sh                         # needs Xcode or its command line tools
-open "build/Keyboard Writer.app"
+./install.sh                       # the latest release, no build needed
+./build.sh                         # or build it: needs Xcode or its command line tools
 ```
+
+Either one puts `Keyboard Writer.app` into `/Applications`, so open it from
+Spotlight, Launchpad or the Dock. Releases are tagged `v1.<n>`; the app's
+About window shows which one is installed.
 
 Pick the keyboard, click a device to leave it out, and press Start.
 

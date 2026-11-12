@@ -1,5 +1,7 @@
 # Tests the app, builds it, and runs it through a whole flash against pretend
-# drives, keeping screenshots of each stage.
+# drives, keeping screenshots of each stage. A run on main that passes
+# publishes the app as a release, tagged with its version; install.sh fetches
+# the latest one.
 name: App
 
 on:
@@ -10,6 +12,12 @@ on:
 concurrency:
   group: app-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write  # to publish the release
+
+env:
+  VERSION: 1.${{ github.run_number }}
 
 jobs:
   build:
@@ -38,3 +46,12 @@ jobs:
           name: screenshots
           path: ${{ runner.temp }}/screenshots
           if-no-files-found: ignore
+
+      - name: Publish the app as a release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ditto -c -k --keepParent "build/Keyboard Writer.app" "$RUNNER_TEMP/Keyboard-Writer.zip"
+          gh release create "v$VERSION" "$RUNNER_TEMP/Keyboard-Writer.zip" \
+            --target "$GITHUB_SHA" --title "Keyboard Writer $VERSION" --generate-notes

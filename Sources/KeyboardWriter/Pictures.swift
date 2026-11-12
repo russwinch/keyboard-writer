@@ -88,15 +88,18 @@ struct DeviceTile: View {
 /// Gentle throb for the device that needs attention.
 private struct Pulse: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var on = false
+    // Spelled without `@State`: newer SDKs make that a macro whose plugin
+    // ships with Xcode only, so the command line tools can't build it.
+    private let pulsing = State(initialValue: false)
 
     func body(content: Content) -> some View {
-        content
+        let on = pulsing.wrappedValue
+        return content
             .scaleEffect(on ? 1.05 : 1)
             .shadow(color: Color.accentColor.opacity(on ? 0.65 : 0.2), radius: on ? 18 : 8)
             .onAppear {
                 guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) { on = true }
+                withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) { pulsing.wrappedValue = true }
             }
     }
 }
