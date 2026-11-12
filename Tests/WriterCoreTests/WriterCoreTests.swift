@@ -23,15 +23,14 @@ final class WriterCoreTests: XCTestCase {
     func keyboard(_ id: String) -> Keyboard { targets.keyboards.first { $0.id == id }! }
 
     /// A folder of files named the way CI names them.
-    func firmwareFolder() throws -> [URL] {
-        let names = [
-            "waterfowl_dongle prospector_adapter-xiao_ble__zmk-zmk.uf2",
-            "waterfowl_left nice_view_adapter nice_view-nice_nano__zmk-zmk.uf2",
-            "waterfowl_left_peripheral_for_dongle.uf2",
-            "waterfowl_right-nice_nano__zmk-zmk.uf2",
-            "settings_reset-nice_nano__zmk-zmk.uf2",
-            "settings_reset-xiao_ble__zmk-zmk.uf2",
-        ]
+    func firmwareFolder(_ names: [String] = [
+        "waterfowl_dongle prospector_adapter-xiao_ble__zmk-zmk.uf2",
+        "waterfowl_left nice_view_adapter nice_view-nice_nano__zmk-zmk.uf2",
+        "waterfowl_left_peripheral_for_dongle.uf2",
+        "waterfowl_right-nice_nano__zmk-zmk.uf2",
+        "settings_reset-nice_nano__zmk-zmk.uf2",
+        "settings_reset-xiao_ble__zmk-zmk.uf2",
+    ]) throws -> [URL] {
         let folder = scratch.appendingPathComponent("firmware")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         for name in names {
@@ -79,6 +78,60 @@ final class WriterCoreTests: XCTestCase {
             "settings_reset-nice_nano__zmk-zmk.uf2",
             "waterfowl_right-nice_nano__zmk-zmk.uf2",
         ])
+    }
+
+    /// Every keyboard's dongle variant picks its own files out of a whole
+    /// release, not the plain keyboard's left half.
+    func testDongleVariantsPickTheirFiles() throws {
+        let release = try firmwareFolder([
+            "urchin_dongle prospector_adapter-xiao_ble__zmk-zmk.uf2",
+            "urchin_left nice_view_adapter nice_view_gem-nice_nano__zmk-zmk.uf2",
+            "urchin_left_peripheral_for_dongle.uf2",
+            "urchin_right nice_view_adapter nice_view_gem-nice_nano__zmk-zmk.uf2",
+            "splitkb_aurora_corne_dongle prospector_adapter-xiao_ble__zmk-zmk.uf2",
+            "splitkb_aurora_corne_left nice_view_adapter nice_view_gem-nice_nano__zmk-zmk.uf2",
+            "splitkb_aurora_corne_left_peripheral_for_dongle.uf2",
+            "splitkb_aurora_corne_right nice_view_adapter nice_view_gem-nice_nano__zmk-zmk.uf2",
+            "forager_dongle prospector_adapter-xiao_ble__zmk-zmk.uf2",
+            "forager_left rgbled_adapter-xiao_ble__zmk-zmk.uf2",
+            "forager_left_peripheral_for_dongle.uf2",
+            "forager_right rgbled_adapter-xiao_ble__zmk-zmk.uf2",
+            "settings_reset-nice_nano__zmk-zmk.uf2",
+            "settings_reset-xiao_ble__zmk-zmk.uf2",
+        ])
+        let expected = [
+            "urchin-dongle": [
+                "urchin_dongle prospector_adapter-xiao_ble__zmk-zmk.uf2",
+                "urchin_left_peripheral_for_dongle.uf2",
+                "urchin_right nice_view_adapter nice_view_gem-nice_nano__zmk-zmk.uf2",
+            ],
+            "aurora-dongle": [
+                "splitkb_aurora_corne_dongle prospector_adapter-xiao_ble__zmk-zmk.uf2",
+                "splitkb_aurora_corne_left_peripheral_for_dongle.uf2",
+                "splitkb_aurora_corne_right nice_view_adapter nice_view_gem-nice_nano__zmk-zmk.uf2",
+            ],
+            "forager-dongle": [
+                "forager_dongle prospector_adapter-xiao_ble__zmk-zmk.uf2",
+                "forager_left_peripheral_for_dongle.uf2",
+                "forager_right rgbled_adapter-xiao_ble__zmk-zmk.uf2",
+            ],
+        ]
+        for (variantID, files) in expected {
+            let variant = keyboard(variantID)
+            XCTAssertEqual(variant.devices.map(\.name), ["dongle", "left", "right"], variantID)
+            let plan = try Firmware.plan(keyboard: variant, reset: false, files: release)
+            XCTAssertEqual(plan.map(\.uf2.lastPathComponent), files, variantID)
+
+            let plain = keyboard(String(variantID.dropLast("-dongle".count)))
+            XCTAssertTrue(variant.devices[1].runs(shield: plain.devices[0].firmware), variantID)
+            XCTAssertTrue(variant.devices[2].runs(shield: plain.devices[1].firmware), variantID)
+            XCTAssertFalse(variant.devices[1].runs(shield: plain.devices[1].firmware), variantID)
+            XCTAssertTrue(variant.devices[0].runs(shield: variant.devices[0].firmware), variantID)
+        }
+
+        let withReset = try Firmware.plan(keyboard: keyboard("forager-dongle"), reset: true, files: release)
+        XCTAssertEqual(withReset.filter { $0.kind == .settingsReset }.map(\.uf2.lastPathComponent),
+                       Array(repeating: "settings_reset-xiao_ble__zmk-zmk.uf2", count: 3))
     }
 
     func testPlanForSomeDevices() throws {
