@@ -39,6 +39,9 @@
   feature, CI shows the real list being fetched (the smoke run's first
   screenshot) but never downloads a build. Say so plainly if asked how tested
   it is.
+- The app's self-update has never replaced and relaunched a real app: the
+  swap and the unzip are unit-tested on stand-in bundles, and the smoke run
+  skips the update check (it runs with `--volumes`).
 
 ## README
 

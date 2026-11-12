@@ -40,7 +40,13 @@ final class WriterModel: ObservableObject {
     @Published private(set) var current = 0
     @Published private(set) var status: StepStatus = .waiting
 
+    /// A newer release of this app, when there is one.
+    @Published private(set) var update: AppRelease?
+    @Published private(set) var updating = false
+    @Published private(set) var updateProblem: String?
+
     private var roots = Drives.volumes
+    private var pretendDrives = false
     private var task: Task<Void, Never>?
     private var startWhenShown = false
     /// False once the person (or smoke.sh) has said which firmware to use.
@@ -53,6 +59,7 @@ final class WriterModel: ObservableObject {
         source = Firmware.newestDownload().map(Source.file)
         readArguments()
         if sourceIsDefault { loadBuilds() }
+        checkForUpdate()
     }
 
     /// targets.json is copied into the .app by build.sh; from `swift run` it is read from the repo.
@@ -86,7 +93,10 @@ final class WriterModel: ObservableObject {
             case "--reset": reset = true
             case "--start": startWhenShown = true
             case "--volumes":
-                if let path = arguments.next() { roots = [URL(fileURLWithPath: path)] }
+                if let path = arguments.next() {
+                    roots = [URL(fileURLWithPath: path)]
+                    pretendDrives = true
+                }
             default: break
             }
         }
@@ -107,7 +117,7 @@ final class WriterModel: ObservableObject {
         }
     }
 
-    var canStart: Bool { source != nil && !selected.isEmpty }
+    var canStart: Bool { source != nil && !selected.isEmpty && !updating }
 
     func use(_ source: Source) {
         self.source = source
@@ -144,6 +154,51 @@ final class WriterModel: ObservableObject {
         panel.canChooseDirectories = true
         if panel.runModal() == .OK, let url = panel.url {
             use(.file(url))
+        }
+    }
+
+    // MARK: Updating the app
+
+    /// The running app, when it is a released build in a folder it can replace itself in.
+    private var updatableBundle: URL? {
+        let bundle = Bundle.main.bundleURL
+        guard !pretendDrives,
+            bundle.pathExtension == "app",
+            let version = runningVersion, !version.isLocalBuild,
+            FileManager.default.isWritableFile(atPath: bundle.deletingLastPathComponent().path)
+        else { return nil }
+        return bundle
+    }
+
+    private var runningVersion: AppVersion? {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String).flatMap(AppVersion.init)
+    }
+
+    /// Asks GitHub for a newer release; a failed check shows nothing.
+    private func checkForUpdate() {
+        guard updatableBundle != nil, let running = runningVersion else { return }
+        Task {
+            update = try? await AppUpdates.newer(than: running)
+        }
+    }
+
+    func installUpdate() {
+        guard let update, !updating, phase == .setup,
+            let bundle = updatableBundle, let identifier = Bundle.main.bundleIdentifier
+        else { return }
+        updating = true
+        updateProblem = nil
+        Task {
+            do {
+                try await Task.detached {
+                    try await AppUpdates.install(update, replacing: bundle, bundleIdentifier: identifier)
+                }.value
+                try AppUpdates.relaunch(bundle)
+                NSApp.terminate(nil)
+            } catch {
+                updateProblem = error.localizedDescription
+                updating = false
+            }
         }
     }
 
