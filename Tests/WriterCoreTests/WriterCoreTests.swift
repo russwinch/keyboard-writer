@@ -249,6 +249,14 @@ final class WriterCoreTests: XCTestCase {
         XCTAssertTrue(left.runs(shield: "settings_reset"))
         XCTAssertFalse(left.runs(shield: "waterfowl_right"))
         XCTAssertTrue(keyboard("waterfowl-dongle").devices[0].runs(shield: "waterfowl_dongle"))
+        // a dongle moved from one keyboard to another is still found
+        let urchinDongle = keyboard("urchin-dongle").devices[0]
+        XCTAssertTrue(urchinDongle.runs(shield: "waterfowl_dongle"))
+        XCTAssertTrue(urchinDongle.runs(shield: "forager_dongle"))
+        XCTAssertFalse(urchinDongle.runs(shield: "waterfowl_left"))
+        // but a half isn't taken for a dongle, nor for another keyboard's half
+        XCTAssertFalse(left.runs(shield: "urchin_dongle"))
+        XCTAssertFalse(left.runs(shield: "urchin_left"))
         XCTAssertEqual(USBSerialPorts.name(in: "keyboard-writer"), "")
         XCTAssertNil(USBSerialPorts.name(in: "ok"))
         XCTAssertNil(USBSerialPorts.name(in: ""))

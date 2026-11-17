@@ -12,9 +12,12 @@ public struct Device: Codable, Hashable, Identifiable, Sendable {
     /// Whether a plugged-in device that says it was built for `shield` is
     /// this one. Firmware names are the shield, sometimes with more after it
     /// (waterfowl_left_peripheral_for_dongle); a device that has just had a
-    /// settings reset could be any of them.
+    /// settings reset could be any of them. A dongle is the same hardware
+    /// whichever keyboard it serves, so any dongle will do for a dongle
+    /// (one last built for the Waterfowl, say, when flashing the Urchin's).
     public func runs(shield: String) -> Bool {
         shield == "settings_reset" || firmware == shield || firmware.hasPrefix(shield + "_")
+            || (name == "dongle" && shield.hasSuffix("_dongle"))
     }
 }
 
