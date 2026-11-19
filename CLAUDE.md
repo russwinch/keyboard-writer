@@ -26,8 +26,8 @@
 - The builds the app offers are the config repo's GitHub releases, published
   by the `release` job in its `.github/workflows/build.yml`. `Builds.swift`
   relies on that job's conventions: one `.zip` of `.uf2` files per release,
-  the release name is what the list shows, branches other than `main` are
-  prereleases.
+  the release name is what the list shows (after the build number from its
+  `build-<number>` tag), branches other than `main` are prereleases.
 - The ZMK module (`firmware/`, `zephyr/module.yml`) is pulled into the config
   repo by `config/west.yml` there; a module change only reaches a keyboard
   once that repo builds with it.

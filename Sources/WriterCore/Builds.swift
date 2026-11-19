@@ -10,21 +10,40 @@ public struct Build: Identifiable, Hashable, Sendable {
     public let id: Int
     /// The release's name: "<branch> · <commit subject>".
     public let title: String
+    /// The config repo's CI run that built it, from the release's tag
+    /// ("build-<number>"); nil for a tag of another shape.
+    public let number: Int?
     public let date: Date
     /// Built from the default branch (other branches publish prereleases).
     public let main: Bool
     public let zip: URL
 
-    public init(id: Int, title: String, date: Date, main: Bool, zip: URL) {
+    public init(id: Int, title: String, number: Int? = nil, date: Date, main: Bool, zip: URL) {
         self.id = id
         self.title = title
+        self.number = number
         self.date = date
         self.main = main
         self.zip = zip
     }
 }
 
+extension Build {
+    /// As the list of builds shows it: "203 · main · Subject".
+    public var label: String {
+        guard let number, title != "build-\(number)" else { return title }
+        return "\(number) · \(title)"
+    }
+}
+
 public enum Builds {
+    /// The number in a release tag "build-<number>", as the config repo's
+    /// release job names them.
+    public static func number(inTag tag: String) -> Int? {
+        guard tag.hasPrefix("build-") else { return nil }
+        return Int(tag.dropFirst("build-".count))
+    }
+
     /// The config repo asked for when none is set, as "owner/name".
     public static let defaultRepo = "russwinch/zmk-config"
 
@@ -60,6 +79,7 @@ public enum Builds {
                 return Build(
                     id: release.id,
                     title: name.isEmpty ? release.tag_name : name,
+                    number: number(inTag: release.tag_name),
                     date: release.published_at ?? release.created_at,
                     main: !release.prerelease,
                     zip: asset.browser_download_url)

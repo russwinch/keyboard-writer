@@ -130,7 +130,7 @@ struct FirmwareRow: View {
                     if let problem = model.buildsProblem { Text(problem) }
                     Section("Builds from \(model.repo)") {
                         ForEach(model.builds) { build in
-                            Button(verbatim("\(build.title) (\(ago(build.date)))")) { model.use(.build(build)) }
+                            Button(verbatim("\(build.label) (\(ago(build.date)))")) { model.use(.build(build)) }
                         }
                     }
                 }
@@ -170,7 +170,9 @@ struct FirmwareRow: View {
 
     private var detail: String? {
         switch model.source {
-        case .build(let build)?: return "Built \(ago(build.date)) · \(model.repo)"
+        case .build(let build)?:
+            let built = "Built \(ago(build.date)) · \(model.repo)"
+            return build.number.map { "Build \($0) · \(built)" } ?? built
         case .file(let url)?: return "From \(ago(Firmware.modified(url)))"
         case nil: return model.buildsProblem
         }
