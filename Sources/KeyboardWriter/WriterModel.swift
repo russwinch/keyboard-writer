@@ -174,11 +174,12 @@ final class WriterModel: ObservableObject {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String).flatMap(AppVersion.init)
     }
 
-    /// Asks GitHub for a newer release; a failed check shows nothing.
-    private func checkForUpdate() {
-        guard updatableBundle != nil, let running = runningVersion else { return }
+    /// Asks GitHub for a newer release, at launch and with each refresh of the builds;
+    /// a failed check leaves things as they were.
+    func checkForUpdate() {
+        guard updatableBundle != nil, !updating, let running = runningVersion else { return }
         Task {
-            update = try? await AppUpdates.newer(than: running)
+            if let newer = try? await AppUpdates.newer(than: running) { update = newer }
         }
     }
 

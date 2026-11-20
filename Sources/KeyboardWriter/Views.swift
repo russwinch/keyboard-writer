@@ -96,9 +96,17 @@ struct UpdateButton: View {
                 ProgressView().controlSize(.mini)
                 Text("Updating…").foregroundStyle(.secondary)
             } else {
-                Button("Update to \(release.version.description)") { model.installUpdate() }
-                    .buttonStyle(.borderless)
-                    .help("Install Keyboard Writer \(release.version.description) and reopen it")
+                Button { model.installUpdate() } label: {
+                    Label("Update Available: \(release.version.description)", systemImage: "shippingbox.fill")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(.green.gradient))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .help("Install Keyboard Writer \(release.version.description) and reopen it")
             }
         }
         .font(.footnote)
@@ -143,6 +151,7 @@ struct FirmwareRow: View {
             .fixedSize()
             Button {
                 model.loadBuilds()
+                model.checkForUpdate()
             } label: {
                 if model.loadingBuilds {
                     ProgressView().controlSize(.small)
