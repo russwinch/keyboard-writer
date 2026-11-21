@@ -36,6 +36,19 @@ extension Build {
     }
 }
 
+/// Which of the config repo's builds the list offers.
+public enum BuildsShown: String, CaseIterable, Sendable {
+    case both, main, branches
+
+    public func filter(_ builds: [Build]) -> [Build] {
+        switch self {
+        case .both: return builds
+        case .main: return builds.filter(\.main)
+        case .branches: return builds.filter { !$0.main }
+        }
+    }
+}
+
 public enum Builds {
     /// The number in a release tag "build-<number>", as the config repo's
     /// release job names them.

@@ -296,6 +296,10 @@ final class WriterCoreTests: XCTestCase {
         XCTAssertEqual(Builds.preferred(builds)?.id, 3)
         XCTAssertEqual(Builds.preferred(Array(builds.prefix(1)))?.id, 4)
         XCTAssertNil(Builds.preferred([]))
+        XCTAssertEqual(BuildsShown.both.filter(builds).map(\.id), [4, 3, 2, 1])
+        XCTAssertEqual(BuildsShown.main.filter(builds).map(\.id), [3, 2, 1])
+        XCTAssertEqual(BuildsShown.branches.filter(builds).map(\.id), [4])
+        XCTAssertEqual(Builds.preferred(BuildsShown.branches.filter(builds))?.id, 4)
         XCTAssertEqual(try Builds.parse(Data("[]".utf8)), [])
     }
 

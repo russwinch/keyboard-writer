@@ -121,15 +121,34 @@ struct UpdateButton: View {
     }
 }
 
+/// Says whether the chosen build is from main or another branch.
+struct BranchTag: View {
+    let main: Bool
+
+    var body: some View {
+        Label(main ? "main" : "branch", systemImage: main ? "checkmark.seal.fill" : "arrow.triangle.branch")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(main ? Color.green : Color.orange))
+            .fixedSize()
+            .help(main ? "Built from main" : "A prerelease, built from a branch other than main")
+    }
+}
+
 struct FirmwareRow: View {
     @EnvironmentObject private var model: WriterModel
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                HStack(spacing: 6) {
+                    if case .build(let build)? = model.source { BranchTag(main: build.main) }
+                    Text(title)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
                 if let detail {
                     Text(detail)
                         .font(.footnote)
@@ -144,9 +163,17 @@ struct FirmwareRow: View {
                 } else {
                     if let problem = model.buildsProblem { Text(problem) }
                     Section("Builds from \(model.repo)") {
-                        ForEach(model.builds) { build in
-                            Button(verbatim("\(build.label) (\(ago(build.date)))")) { model.use(.build(build)) }
+                        ForEach(model.shownBuilds) { build in
+                            Button { model.use(.build(build)) } label: {
+                                Label(verbatim("\(build.label) (\(ago(build.date)))"), systemImage: branchIcon(build))
+                            }
                         }
+                        if model.shownBuilds.isEmpty { Text("None of these yet") }
+                    }
+                    Picker("Show", selection: $model.buildsShown) {
+                        Text("Main and Branches").tag(BuildsShown.both)
+                        Text("Main Only").tag(BuildsShown.main)
+                        Text("Branches Only").tag(BuildsShown.branches)
                     }
                 }
                 Divider()
@@ -157,7 +184,7 @@ struct FirmwareRow: View {
             }
             .fixedSize()
             Button {
-                model.loadBuilds()
+                model.loadBuilds(refresh: true)
                 model.checkForUpdate()
             } label: {
                 if model.loadingBuilds {
@@ -193,6 +220,8 @@ struct FirmwareRow: View {
         case nil: return model.buildsProblem
         }
     }
+
+    private func branchIcon(_ build: Build) -> String { build.main ? "checkmark.seal.fill" : "arrow.triangle.branch" }
 
     /// A plain String, so a commit subject isn't read as Markdown.
     private func verbatim(_ text: String) -> String { text }

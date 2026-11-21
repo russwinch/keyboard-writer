@@ -34,6 +34,15 @@ final class WriterModel: ObservableObject {
     @Published private(set) var builds: [Build] = []
     @Published private(set) var buildsProblem: String?
     @Published private(set) var loadingBuilds = false
+    /// Remembered between launches; changing it picks the newest build it shows.
+    @Published var buildsShown = BuildsShown(rawValue: UserDefaults.standard.string(forKey: "buildsShown") ?? "") ?? .both {
+        didSet {
+            UserDefaults.standard.set(buildsShown.rawValue, forKey: "buildsShown")
+            pickNewestBuild()
+        }
+    }
+    /// The builds the list offers, newest first.
+    var shownBuilds: [Build] { buildsShown.filter(builds) }
 
     @Published private(set) var phase: Phase = .setup
     @Published private(set) var plan: [Step] = []
@@ -130,7 +139,8 @@ final class WriterModel: ObservableObject {
 
     /// Asks the config repo for its builds. Until the person chooses
     /// something themselves, the newest build from main is the one used.
-    func loadBuilds() {
+    /// A refresh also moves on to the newest build, unless a file was chosen.
+    func loadBuilds(refresh: Bool = false) {
         guard !loadingBuilds else { return }
         loadingBuilds = true
         let repo = repo
@@ -139,13 +149,21 @@ final class WriterModel: ObservableObject {
             do {
                 builds = try await Builds.list(repo: repo)
                 buildsProblem = nil
-                if sourceIsDefault, let build = Builds.preferred(builds) {
+                if sourceIsDefault, let build = Builds.preferred(shownBuilds) {
                     source = .build(build)
+                } else if refresh {
+                    pickNewestBuild()
                 }
             } catch {
                 buildsProblem = error.localizedDescription
             }
         }
+    }
+
+    /// The newest shown build (from main, if it shows any), unless the firmware is a file.
+    private func pickNewestBuild() {
+        if case .file? = source, !sourceIsDefault { return }
+        if let build = Builds.preferred(shownBuilds) { source = .build(build) }
     }
 
     func chooseFile() {
