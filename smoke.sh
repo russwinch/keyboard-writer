@@ -43,7 +43,7 @@ sleep 8
 shot 0-builds
 kill $builds
 
-"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset &
+"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset --leave-out right &
 setup=$!
 sleep 4
 shot 1-setup

@@ -90,6 +90,8 @@ final class WriterModel: ObservableObject {
                 }
             case "--repo":
                 if let name = arguments.next() { repo = name }
+            case "--leave-out":
+                if let name = arguments.next() { selected.remove(name) }
             case "--reset": reset = true
             case "--start": startWhenShown = true
             case "--volumes":

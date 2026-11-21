@@ -48,6 +48,7 @@ struct DeviceTile: View {
                     picture
                 }
             }
+            .opacity(look == .off ? 0.35 : 1)
             .overlay(alignment: .topTrailing) {
                 if look == .done {
                     Image(systemName: "checkmark.circle.fill")
@@ -55,16 +56,29 @@ struct DeviceTile: View {
                         .foregroundStyle(.white, .green)
                         .offset(x: 8, y: -8)
                         .transition(.scale.combined(with: .opacity))
+                } else if look == .off {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white, .gray)
+                        .offset(x: 8, y: -8)
+                        .transition(.scale.combined(with: .opacity))
                 }
             }
-            Text(device.name.capitalized)
-                .font(.callout.weight(look == .next ? .semibold : .regular))
-                .foregroundStyle(look == .next ? Color.accentColor : Color.secondary)
+            VStack(spacing: 2) {
+                Text(device.name.capitalized)
+                    .font(.callout.weight(look == .next ? .semibold : .regular))
+                    .foregroundStyle(look == .next ? Color.accentColor : Color.secondary)
+                    .strikethrough(look == .off)
+                // Always there, so a tile doesn't jump when it's left out.
+                Text("Not written")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .opacity(look == .off ? 1 : 0)
+            }
         }
-        .opacity(look == .off ? 0.3 : 1)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(device.what)
+        .accessibilityLabel(look == .off ? "\(device.what), not written" : device.what)
     }
 
     private var tint: Color {
@@ -78,9 +92,9 @@ struct DeviceTile: View {
     @ViewBuilder
     private var picture: some View {
         if device.name == "dongle" {
-            DonglePicture(tint: tint)
+            DonglePicture(tint: tint, dashed: look == .off)
         } else {
-            HalfPicture(tint: tint, right: device.name == "right")
+            HalfPicture(tint: tint, right: device.name == "right", dashed: look == .off)
         }
     }
 }
@@ -108,6 +122,7 @@ private struct Pulse: ViewModifier {
 struct HalfPicture: View {
     let tint: Color
     let right: Bool
+    var dashed = false
 
     var body: some View {
         VStack(alignment: right ? .leading : .trailing, spacing: 5) {
@@ -124,7 +139,7 @@ struct HalfPicture: View {
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(tint.opacity(0.16)))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(tint.opacity(0.5), lineWidth: 1.5))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(tint.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: dashed ? [5, 4] : [])))
         .rotationEffect(.degrees(right ? -7 : 7))
         .padding(8)
     }
@@ -139,6 +154,7 @@ struct HalfPicture: View {
 /// The dongle: a small box with a screen and its USB cable.
 struct DonglePicture: View {
     let tint: Color
+    var dashed = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -148,7 +164,7 @@ struct DonglePicture: View {
                 .frame(width: 58, height: 26)
                 .padding(8)
                 .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(tint.opacity(0.16)))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(tint.opacity(0.5), lineWidth: 1.5))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(tint.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: dashed ? [5, 4] : [])))
         }
     }
 }
