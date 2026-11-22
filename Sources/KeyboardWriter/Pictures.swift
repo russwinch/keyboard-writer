@@ -39,6 +39,9 @@ struct DeviceTile: View {
     let device: Device
     let look: Look
 
+    /// Not the accent colour: that can be green, which is what done looks like.
+    static let nextColor = Color.blue
+
     var body: some View {
         VStack(spacing: 12) {
             Group {
@@ -66,7 +69,7 @@ struct DeviceTile: View {
             }
             Text(device.name.capitalized)
                 .font(.callout.weight(look == .next ? .semibold : .regular))
-                .foregroundStyle(look == .next ? Color.accentColor : Color.secondary)
+                .foregroundStyle(look == .next ? DeviceTile.nextColor : Color.secondary)
                 .strikethrough(look == .off)
         }
         .contentShape(Rectangle())
@@ -76,7 +79,7 @@ struct DeviceTile: View {
 
     private var tint: Color {
         switch look {
-        case .next: return .accentColor
+        case .next: return Self.nextColor
         case .done: return .green
         case .off, .idle: return .secondary
         }
@@ -103,7 +106,7 @@ private struct Pulse: ViewModifier {
         let on = pulsing.wrappedValue
         return content
             .scaleEffect(on ? 1.05 : 1)
-            .shadow(color: Color.accentColor.opacity(on ? 0.65 : 0.2), radius: on ? 18 : 8)
+            .shadow(color: DeviceTile.nextColor.opacity(on ? 0.65 : 0.2), radius: on ? 18 : 8)
             .onAppear {
                 guard !reduceMotion else { return }
                 withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) { pulsing.wrappedValue = true }

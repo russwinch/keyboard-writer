@@ -241,6 +241,8 @@ struct FlashingView: View {
                 Text("Step \(step.id + 1) of \(model.plan.count) · \(step.kind == .settingsReset ? "settings reset" : "firmware")")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
+                FirmwareLine()
+                    .padding(.top, 4)
                 ProgressView(value: Double(step.id), total: Double(model.plan.count))
                     .padding(.top, 8)
                     .animation(.default, value: step.id)
@@ -283,6 +285,29 @@ struct FlashingView: View {
     /// True for a device's second trip into the bootloader (firmware after a settings reset).
     private func again(_ step: Step) -> Bool {
         model.plan.contains { $0.device == step.device && $0.id < step.id }
+    }
+}
+
+/// Which firmware is going on, as small print above the progress bar.
+struct FirmwareLine: View {
+    @EnvironmentObject private var model: WriterModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            switch model.source {
+            case .build(let build)?:
+                BranchTag(main: build.main)
+                Text(verbatim: build.label)
+            case .file(let url)?:
+                Text(verbatim: url.lastPathComponent)
+            case nil:
+                EmptyView()
+            }
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .truncationMode(.middle)
     }
 }
 
