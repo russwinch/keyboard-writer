@@ -64,17 +64,10 @@ struct DeviceTile: View {
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            VStack(spacing: 2) {
-                Text(device.name.capitalized)
-                    .font(.callout.weight(look == .next ? .semibold : .regular))
-                    .foregroundStyle(look == .next ? Color.accentColor : Color.secondary)
-                    .strikethrough(look == .off)
-                // Always there, so a tile doesn't jump when it's left out.
-                Text("Not written")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .opacity(look == .off ? 1 : 0)
-            }
+            Text(device.name.capitalized)
+                .font(.callout.weight(look == .next ? .semibold : .regular))
+                .foregroundStyle(look == .next ? Color.accentColor : Color.secondary)
+                .strikethrough(look == .off)
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)

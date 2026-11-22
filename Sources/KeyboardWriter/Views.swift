@@ -47,7 +47,7 @@ struct SetupView: View {
                 devices: model.keyboard.devices,
                 look: { model.selected.contains($0.name) ? .idle : .off },
                 tap: { model.toggle($0) })
-            Text(leftOutHint)
+            Text("Click a device to leave it out")
                 .font(.footnote)
                 .foregroundStyle(.tertiary)
             Spacer(minLength: 0)
@@ -75,13 +75,6 @@ struct SetupView: View {
             .keyboardShortcut(.defaultAction)
             .disabled(!model.canStart)
         }
-    }
-
-    private var leftOutHint: String {
-        let out = model.keyboard.devices.filter { !model.selected.contains($0.name) }.map(\.name)
-        if out.isEmpty { return "Click a device to leave it out" }
-        let names = out.formatted(.list(type: .and))
-        return "Leaving out the \(names) · click to put \(out.count == 1 ? "it" : "them") back"
     }
 }
 
