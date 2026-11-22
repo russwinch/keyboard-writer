@@ -334,6 +334,11 @@ struct Instruction: View {
                 }
                 .font(.callout)
             }
+            if case .unreadable = status {
+                Button("Open Privacy Settings") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")!)
+                }
+            }
         }
         .animation(.default, value: status)
     }
