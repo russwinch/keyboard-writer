@@ -282,7 +282,9 @@ final class WriterModel: ObservableObject {
                 current = index
                 status = .waiting
                 try await flash(
-                    plan[index], roots: roots, boards: targets.boards, ports: USBSerialPorts()
+                    plan[index], roots: roots, boards: targets.boards,
+                    // With pretend drives, leave any real keyboard on USB alone.
+                    ports: pretendDrives ? nil : USBSerialPorts()
                 ) { [weak self] status in
                     await self?.update(status)
                 }
