@@ -340,7 +340,7 @@ struct Instruction: View {
 
     private var problem: Bool {
         switch status {
-        case .wrongBoard, .tooManyDrives: return true
+        case .wrongBoard, .tooManyDrives, .unreadable: return true
         default: return false
         }
     }
@@ -354,6 +354,9 @@ struct Instruction: View {
                 + "\(model.boardLabel(step.device.board)). Unplug it; nothing was copied."
         case .tooManyDrives:
             return "More than one bootloader drive is connected. Unplug the others."
+        case .unreadable(let name):
+            return "Can't read \(name). Turn on Keyboard Writer under Removable Volumes in "
+                + "System Settings > Privacy & Security > Files & Folders."
         case .copying, .restarting, .done:
             return "Leave it plugged in"
         }
@@ -363,6 +366,7 @@ struct Instruction: View {
         switch status {
         case .waiting, .wrongBoard, .tooManyDrives:
             return "Waiting for it… double-tap reset if nothing happens"
+        case .unreadable: return "Waiting to be allowed to read it…"
         case .starting: return "Starting its bootloader…"
         case .copying: return step.kind == .settingsReset ? "Clearing its settings…" : "Copying the firmware…"
         case .restarting: return "Restarting…"

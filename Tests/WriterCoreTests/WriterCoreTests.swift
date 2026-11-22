@@ -197,6 +197,46 @@ final class WriterCoreTests: XCTestCase {
         XCTAssertEqual(statuses.last, .done)
     }
 
+    func testUnreadableDriveIsSaidAndLeftAlone() async throws {
+        let step = try Firmware.plan(keyboard: keyboard("waterfowl"), only: ["left"], reset: false, files: firmwareFolder())[0]
+        let volumes = scratch.appendingPathComponent("volumes")
+        let drive = volumes.appendingPathComponent("NICENANO")
+        try FileManager.default.createDirectory(at: drive, withIntermediateDirectories: true)
+        let info = drive.appendingPathComponent("INFO_UF2.TXT")
+        try Data("Model: nice!nano".utf8).write(to: info)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: info.path)
+        let seen = Recorder()
+        let ports = FakePorts(["/dev/d": "waterfowl_left"])
+
+        let flashing = Task {
+            try await flash(step, roots: [volumes], boards: targets.boards, ports: ports, timing: fast) {
+                await seen.add($0)
+            }
+        }
+        try await Task.sleep(nanoseconds: 200_000_000)
+        var statuses = await seen.statuses
+        XCTAssertEqual(statuses, [.unreadable("NICENANO")])
+        XCTAssertEqual(ports.entered, [])  // nothing is sent to its bootloader meanwhile
+
+        // Allowed to read it, it carries on.
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: info.path)
+        let watching = Task { () -> Bool in
+            while FileManager.default.fileExists(atPath: drive.path) {
+                if (try? FileManager.default.contentsOfDirectory(atPath: drive.path))?.contains(step.uf2.lastPathComponent) == true {
+                    try FileManager.default.removeItem(at: drive)
+                    return true
+                }
+                try await Task.sleep(nanoseconds: 10_000_000)
+            }
+            return false
+        }
+        try await flashing.value
+        let copied = try await watching.value
+        XCTAssertTrue(copied)
+        statuses = await seen.statuses
+        XCTAssertEqual(statuses.last, .done)
+    }
+
     func testDriveThatStaysIsAnError() async throws {
         let step = try Firmware.plan(keyboard: keyboard("waterfowl"), only: ["left"], reset: false, files: firmwareFolder())[0]
         let drive = scratch.appendingPathComponent("volumes/NICENANO")
@@ -239,6 +279,29 @@ final class WriterCoreTests: XCTestCase {
         XCTAssertEqual(copied, step.uf2.lastPathComponent)
         statuses = await seen.statuses
         XCTAssertEqual(statuses.suffix(4), [.starting, .copying, .restarting, .done])
+    }
+
+    func testDeviceIsSentToItsBootloaderOnce() async throws {
+        let step = try Firmware.plan(keyboard: keyboard("waterfowl"), only: ["left"], reset: false, files: firmwareFolder())[0]
+        let volumes = scratch.appendingPathComponent("volumes")
+        try FileManager.default.createDirectory(at: volumes, withIntermediateDirectories: true)
+        let ports = FakePorts([:])
+
+        // Sent to its bootloader, but no drive turns up and it restarts its firmware.
+        ports.plug("/dev/d", "waterfowl_left") {}
+        let flashing = Task {
+            try await flash(step, roots: [volumes], boards: targets.boards, ports: ports, timing: fast) { _ in }
+        }
+        try await Task.sleep(nanoseconds: 200_000_000)
+        ports.plug("/dev/d", "waterfowl_left") {}
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(ports.entered, ["/dev/d"])  // left running, not sent again
+
+        // A double-tap still gets it flashed.
+        let nano = board("Model: nice!nano", in: volumes)
+        try await flashing.value
+        let copied = try await nano.value
+        XCTAssertEqual(copied, step.uf2.lastPathComponent)
     }
 
     func testGreeting() {

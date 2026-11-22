@@ -2,7 +2,10 @@
 # Builds "Keyboard Writer.app" into build/ and, outside CI, copies it to
 # /Applications when the copy there is missing or differs. Needs Xcode or
 # its command line tools (xcode-select --install). VERSION sets the app's
-# version; a release build gets it from the App workflow.
+# version; a release build gets it from the App workflow. SIGN_IDENTITY (a
+# certificate's SHA-1, from a keychain in the search list) signs it with that
+# certificate, as releases are, so macOS keeps the app's permissions (removable
+# volumes) across updates; without it the app is signed ad hoc.
 set -eu
 cd "$(dirname "$0")"
 version="${VERSION:-0.0}"
@@ -35,7 +38,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
-codesign --force --sign - "$app"
+codesign --force --sign "${SIGN_IDENTITY:--}" "$app"
+codesign --display --requirements - "$app" 2>&1 | grep designated
 echo "Built $PWD/$app ($version)"
 
 installed="/Applications/Keyboard Writer.app"

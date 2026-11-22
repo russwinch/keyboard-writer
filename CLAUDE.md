@@ -44,6 +44,12 @@
   screenshot) but never downloads a build. The settings-reset tags: the parsing is
   unit-tested, but no run has yet seen a tag turn the switch on. Say so plainly if asked how tested
   it is.
+- Releases are signed with a self-signed certificate (the `SIGNING_P12` and
+  `SIGNING_PASSWORD` secrets, loaded by the App workflow) so that macOS keeps
+  the app's Removable Volumes permission across self-updates; an ad hoc
+  signature changes with every build and loses it. Without the secrets the
+  app is signed ad hoc. Replacing the certificate costs one more permission
+  prompt.
 - The app's self-update has never replaced and relaunched a real app: the
   swap and the unzip are unit-tested on stand-in bundles, and the smoke run
   skips the update check (it runs with `--volumes`).

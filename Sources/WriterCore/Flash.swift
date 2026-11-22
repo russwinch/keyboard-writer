@@ -31,6 +31,9 @@ public enum StepStatus: Equatable, Sendable {
     case wrongBoard(String)
     /// More than one bootloader drive is mounted, so it isn't clear which to use.
     case tooManyDrives
+    /// A bootloader drive is mounted but this app can't read it (macOS hasn't
+    /// allowed it removable volumes). Nothing is copied or sent to its bootloader.
+    case unreadable(String)
     case copying
     /// Copied; waiting for the drive to go away, which is the board restarting.
     case restarting
@@ -56,8 +59,10 @@ public struct FlashTiming: Sendable {
 /// takes; cancel the task to stop.
 ///
 /// A device that is plugged in and running firmware with the USB trigger is
-/// sent into its bootloader if it says it is this step's device. Other
-/// devices are left alone, so they can all be plugged in at once.
+/// sent into its bootloader if it says it is this step's device, once per
+/// step: if no drive comes of it, it is left for the person to double-tap
+/// rather than sent back again each time it restarts. Other devices are left
+/// alone, so they can all be plugged in at once.
 public func flash(
     _ step: Step,
     roots: [URL],  // no default, so a test can't fall back on the real drives
@@ -79,6 +84,7 @@ public func flash(
 
     var asked: [String: String?] = [:]  // port -> the shield it said (nil: not a keyboard)
     var startingUntil = Date.distantPast
+    var sent = false  // a device has been sent into its bootloader
 
     var drive: URL?
     while drive == nil {
@@ -86,21 +92,27 @@ public func flash(
         let found = Drives.bootloaders(in: roots)
         if found.count > 1 {
             await say(.tooManyDrives)
-        } else if let only = found.first, let board = Drives.board(of: only, boards: boards) {
-            if let board, board != step.device.board {
-                await say(.wrongBoard(board))
-            } else {
-                drive = only
-                break
+        } else if let only = found.first {
+            if let board = Drives.board(of: only, boards: boards) {
+                if let board, board != step.device.board {
+                    await say(.wrongBoard(board))
+                } else {
+                    drive = only
+                    break
+                }
+            } else if FileManager.default.fileExists(atPath: only.path) {
+                await say(.unreadable(only.lastPathComponent))
             }
+            // (otherwise it has just gone: look again)
         } else {
             if let ports {
                 let present = ports.paths()
                 asked = asked.filter { present.contains($0.key) }
                 for path in present where asked[path] == nil {
-                    let shield = ports.probe(path, enter: step.device.runs)
+                    let shield = ports.probe(path, enter: { !sent && step.device.runs(shield: $0) })
                     asked[path] = .some(shield)
-                    if let shield, step.device.runs(shield: shield) {
+                    if let shield, !sent, step.device.runs(shield: shield) {
+                        sent = true
                         startingUntil = Date().addingTimeInterval(10)
                     }
                 }
