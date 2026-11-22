@@ -49,9 +49,13 @@ sleep 4
 shot 1-setup
 kill $setup
 # TEMP diagnostics
-"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset --leave-out right &
+"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset --leave-out right 2>"$work/err.txt" &
 setup=$!
 sleep 12
+echo "=== app stderr"; tail -30 "$work/err.txt"; sw_vers
+ls ~/Library/Logs/DiagnosticReports/ 2>/dev/null | tail -3
+f=$(ls -t ~/Library/Logs/DiagnosticReports/KeyboardWriter* 2>/dev/null | head -1); [ -n "$f" ] && head -c 6000 "$f"
+echo "=== end"
 shot 1b-setup-12s
 kill $setup
 "$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset &
