@@ -15,6 +15,8 @@ struct ContentView: View {
             case .failed(let message): FailedView(message: message)
             }
         }
+        // Room for the update button above the keyboard picker.
+        .padding(.top, model.phase == .setup && model.update != nil ? 16 : 0)
         .padding(28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .topTrailing) {
