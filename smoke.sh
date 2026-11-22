@@ -49,15 +49,14 @@ sleep 4
 shot 1-setup
 kill $setup
 # TEMP diagnostics
-"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset --leave-out right 2>"$work/err.txt" &
+for part in dongle left right; do
+"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --leave-out $part 2>"$work/err-$part.txt" &
 setup=$!
-sleep 12
-echo "=== app stderr"; tail -30 "$work/err.txt"; sw_vers
-ls ~/Library/Logs/DiagnosticReports/ 2>/dev/null | tail -3
-f=$(ls -t ~/Library/Logs/DiagnosticReports/KeyboardWriter* 2>/dev/null | head -1); [ -n "$f" ] && head -c 6000 "$f"
-echo "=== end"
-shot 1b-setup-12s
-kill $setup
+for t in 1 2 3 4 5 6 7 8; do sleep 1; kill -0 $setup 2>/dev/null || break; done
+shot "1x-$part"
+if kill -0 $setup 2>/dev/null; then echo "=== $part alive after ${t}s"; kill $setup; else code=0; wait $setup || code=$?; echo "=== $part exited $code after ${t}s"; fi
+cat "$work/err-$part.txt"
+done
 "$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset &
 setup=$!
 sleep 4
