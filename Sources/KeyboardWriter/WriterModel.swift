@@ -105,7 +105,11 @@ final class WriterModel: ObservableObject {
             case "--start": startWhenShown = true
             case "--volumes":
                 if let path = arguments.next() {
-                    roots = [URL(fileURLWithPath: path)]
+                    let folder = URL(fileURLWithPath: path).resolvingSymlinksInPath()
+                    guard !Drives.volumes.contains(where: { $0.resolvingSymlinksInPath().path == folder.path }) else {
+                        fatalError("--volumes is for pretend drives, not the real \(folder.path)")
+                    }
+                    roots = [folder]
                     pretendDrives = true
                 }
             default: break

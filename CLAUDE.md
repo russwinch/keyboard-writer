@@ -42,6 +42,9 @@
 - The app's self-update has never replaced and relaunched a real app: the
   swap and the unzip are unit-tested on stand-in bundles, and the smoke run
   skips the update check (it runs with `--volumes`).
+- `--volumes` (pretend drives) also turns off the serial ports and refuses the
+  real `/Volumes`, and `flash()` has no default drives: nothing run as a test
+  may reach a real keyboard. Keep it that way; mock new hardware the same way.
 
 ## README
 

@@ -60,7 +60,7 @@ public struct FlashTiming: Sendable {
 /// devices are left alone, so they can all be plugged in at once.
 public func flash(
     _ step: Step,
-    roots: [URL] = Drives.volumes,
+    roots: [URL],  // no default, so a test can't fall back on the real drives
     boards: [String: Board],
     ports: SerialPorts? = nil,
     timing: FlashTiming = FlashTiming(),
