@@ -364,6 +364,23 @@ final class WriterCoreTests: XCTestCase {
         XCTAssertEqual(try Builds.parse(Data("[]".utf8)), [])
     }
 
+    func testBuildsPreferFirmwareZip() throws {
+        func release(_ id: Int, _ assets: [String]) -> String {
+            let list = assets.map {
+                #"{"name": "\#($0)", "browser_download_url": "https://github.com/o/r/releases/download/build-\#(id)/\#($0)"}"#
+            }.joined(separator: ",")
+            return #"""
+                {"id": \#(id), "name": "main · x", "tag_name": "build-\#(id)", "target_commitish": "main", "draft": false,
+                 "prerelease": false, "created_at": "2026-11-0\#(id)T10:00:00Z", "assets": [\#(list)]}
+                """#
+        }
+        // another .zip (the dongles' .elf, say) ahead of the firmware's
+        let json = "[" + [release(2, ["dongle-elf.zip", "firmware.zip", "a.uf2"]), release(1, ["other.zip"])]
+            .joined(separator: ",") + "]"
+        let builds = try Builds.parse(Data(json.utf8))
+        XCTAssertEqual(builds.map { $0.zip.lastPathComponent }, ["firmware.zip", "other.zip"])
+    }
+
     func testResetTags() throws {
         let json = #"""
             [{"ref": "refs/tags/settings-reset/dongle-central", "object": {"sha": "abc", "type": "commit"}},

@@ -25,7 +25,7 @@
   `artifact-name`, update it (and `tools/flash.py` there).
 - The builds the app offers are the config repo's GitHub releases, published
   by the `release` job in its `.github/workflows/build.yml`. `Builds.swift`
-  relies on that job's conventions: one `.zip` of `.uf2` files per release,
+  relies on that job's conventions: a `firmware.zip` of `.uf2` files per release (else its first `.zip`),
   the release name is what the list shows (after the build number from its
   `build-<number>` tag), branches other than `main` are prereleases, and the
   release's target is the commit it was built from (for the

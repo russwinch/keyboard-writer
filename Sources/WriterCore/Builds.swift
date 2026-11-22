@@ -76,7 +76,8 @@ public enum Builds {
     }
 
     /// The builds in GitHub's "list releases" answer, newest first. Drafts
-    /// and releases with no .zip attached are left out.
+    /// and releases with no .zip attached are left out. A release's firmware
+    /// is its `firmware.zip`, or its first .zip when none is named that.
     public static func parse(_ data: Data) throws -> [Build] {
         struct Release: Decodable {
             struct Asset: Decodable {
@@ -98,7 +99,8 @@ public enum Builds {
         return try decoder.decode([Release].self, from: data)
             .compactMap { release -> Build? in
                 guard !release.draft,
-                    let asset = release.assets.first(where: { $0.name.lowercased().hasSuffix(".zip") })
+                    let asset = release.assets.first(where: { $0.name.lowercased() == "firmware.zip" })
+                        ?? release.assets.first(where: { $0.name.lowercased().hasSuffix(".zip") })
                 else { return nil }
                 let name = release.name ?? ""
                 return Build(

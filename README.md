@@ -62,8 +62,8 @@ Devices are flashed in the order listed.
 ### Builds from the config repo
 
 The app reads the config repo's GitHub releases, which need no login. Each
-release is one build: its name is what the list shows, its attached `.zip`
-holds the `.uf2` files, and builds of branches other than `main` are marked
+release is one build: its name is what the list shows, its attached
+`firmware.zip` holds the `.uf2` files, and builds of branches other than `main` are marked
 as prereleases.
 
 To say a change needs a settings reset, tag its commit in the config repo
