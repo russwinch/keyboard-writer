@@ -43,24 +43,10 @@ sleep 8
 shot 0-builds
 kill $builds
 
-"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset --leave-out right &
+"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --leave-out right &
 setup=$!
 sleep 4
 shot 1-setup
-kill $setup
-# TEMP diagnostics
-for part in dongle left right; do
-"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --leave-out $part 2>"$work/err-$part.txt" &
-setup=$!
-for t in 1 2 3 4 5 6 7 8; do sleep 1; kill -0 $setup 2>/dev/null || break; done
-shot "1x-$part"
-if kill -0 $setup 2>/dev/null; then echo "=== $part alive after ${t}s"; kill $setup; else code=0; wait $setup || code=$?; echo "=== $part exited $code after ${t}s"; fi
-cat "$work/err-$part.txt"
-done
-"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset &
-setup=$!
-sleep 4
-shot 1c-setup-all
 kill $setup
 
 "$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset --start &
