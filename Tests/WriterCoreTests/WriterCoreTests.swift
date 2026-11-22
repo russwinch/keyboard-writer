@@ -269,8 +269,9 @@ final class WriterCoreTests: XCTestCase {
             let assets = asset.map {
                 #"[{"name": "\#($0)", "browser_download_url": "https://github.com/o/r/releases/download/build-\#(id)/\#($0)"}]"#
             } ?? "[]"
+            let target = id == 2 ? "main" : String(repeating: String(id), count: 40)
             return #"""
-                {"id": \#(id), "name": "\#(name)", "tag_name": "build-\#(id)", "draft": \#(draft),
+                {"id": \#(id), "name": "\#(name)", "tag_name": "build-\#(id)", "target_commitish": "\#(target)", "draft": \#(draft),
                  "prerelease": \#(prerelease), "created_at": "\#(time)", "published_at": "\#(time)",
                  "assets": \#(assets), "something_else": null}
                 """#
@@ -293,14 +294,34 @@ final class WriterCoreTests: XCTestCase {
         XCTAssertNil(Builds.number(inTag: "build-x"))
         XCTAssertEqual(builds[0].zip.absoluteString, "https://github.com/o/r/releases/download/build-4/firmware.zip")
         XCTAssertFalse(builds[0].main)
-        XCTAssertEqual(Builds.preferred(builds)?.id, 3)
-        XCTAssertEqual(Builds.preferred(Array(builds.prefix(1)))?.id, 4)
-        XCTAssertNil(Builds.preferred([]))
-        XCTAssertEqual(BuildsShown.both.filter(builds).map(\.id), [4, 3, 2, 1])
-        XCTAssertEqual(BuildsShown.main.filter(builds).map(\.id), [3, 2, 1])
-        XCTAssertEqual(BuildsShown.branches.filter(builds).map(\.id), [4])
-        XCTAssertEqual(Builds.preferred(BuildsShown.branches.filter(builds))?.id, 4)
+        XCTAssertEqual(builds[0].commit, String(repeating: "4", count: 40))
+        XCTAssertNil(builds[2].commit)  // a branch name, not a commit
+        XCTAssertEqual(Builds.shown(builds, branches: true).map(\.id), [4, 3, 2, 1])
+        XCTAssertEqual(Builds.shown(builds, branches: false).map(\.id), [3, 2, 1])
         XCTAssertEqual(try Builds.parse(Data("[]".utf8)), [])
+    }
+
+    func testResetTags() throws {
+        let json = #"""
+            [{"ref": "refs/tags/settings-reset/dongle-central", "object": {"sha": "abc", "type": "commit"}},
+             {"ref": "refs/tags/settings-reset/annotated", "object": {"sha": "def", "type": "tag"}},
+             {"ref": "refs/tags/settings-reset/", "object": {"sha": "ghi", "type": "commit"}}]
+            """#
+        let tags = try Builds.parseResetTags(Data(json.utf8))
+        XCTAssertEqual(tags, [
+            ResetTag(name: "settings-reset/dongle-central", commit: "abc"),
+            ResetTag(name: "settings-reset/", commit: "ghi"),
+        ])
+        XCTAssertEqual(tags.map(\.why), ["dongle central", ""])
+        XCTAssertEqual(try Builds.parseResetTags(Data("[]".utf8)), [])
+
+        func compared(_ status: String) throws -> Bool {
+            try Builds.isAncestor(compared: Data(#"{"status": "\#(status)", "commits": []}"#.utf8))
+        }
+        XCTAssertTrue(try compared("ahead"))
+        XCTAssertTrue(try compared("identical"))
+        XCTAssertFalse(try compared("behind"))
+        XCTAssertFalse(try compared("diverged"))
     }
 
     func testDownloadedBuildIsKept() async throws {

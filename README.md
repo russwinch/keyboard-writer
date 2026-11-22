@@ -36,16 +36,18 @@ app, so `install.sh` is only needed the first time.
 
 Pick the keyboard, click a device to leave it out, and press Start.
 
-The firmware is the newest build of `main` in the config repo, fetched when
-you press Start. "Choose…" lists the recent builds from every branch, and
-also takes a zip or a folder of `.uf2` files from this Mac. With no builds to
+The firmware is the newest build in the config repo, fetched when you press
+Start. "Choose…" lists the recent builds; "Show Branch Builds" there decides
+whether that's every branch's or only `main`'s, and the newest of those is the
+one picked. It also takes a zip or a folder of `.uf2` files from this Mac. With no builds to
 offer (or no network) it uses the newest `firmware*.zip` in `~/Downloads`.
 The button beside "Choose…" checks for builds published since the app opened.
 See "Builds from the config repo" below for the config repo's side of this.
 
 "Reset settings first" flashes `settings_reset` before each device's firmware,
 which clears its Bluetooth pairings; each device is then done twice, so leave
-it plugged in.
+it plugged in. It turns itself on when the chosen build asks for a reset that
+a device hasn't had yet (see below), and you can still turn it off.
 
 The app only sends a device into its bootloader if it says it is the one
 wanted, and never copies onto a board of the wrong type.
@@ -63,6 +65,15 @@ The app reads the config repo's GitHub releases, which need no login. Each
 release is one build: its name is what the list shows, its attached `.zip`
 holds the `.uf2` files, and builds of branches other than `main` are marked
 as prereleases.
+
+To say a change needs a settings reset, tag its commit in the config repo
+with a plain (not annotated) tag named `settings-reset/<why>`:
+
+    git tag settings-reset/dongle-central <commit> && git push origin settings-reset/dongle-central
+
+Every build with that commit in its history then asks for a reset, on each
+device this Mac hasn't flashed with a reset for that tag. The tag can be added
+after the build is published.
 
 The config repo publishes them with a `release` job after ZMK's own `build`
 job; copy it from

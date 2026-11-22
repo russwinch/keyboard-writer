@@ -58,6 +58,12 @@ struct SetupView: View {
                     Text("Clears Bluetooth pairings, including this Mac's")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    if !model.resetsDue.isEmpty {
+                        let whys = model.resetsDue.map(\.why).filter { !$0.isEmpty }
+                        Text(whys.isEmpty ? "This build asks for one" : "This build asks for one: \(whys.joined(separator: ", "))")
+                            .font(.footnote)
+                            .foregroundStyle(.blue)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -163,11 +169,7 @@ struct FirmwareRow: View {
                         }
                         if model.shownBuilds.isEmpty { Text("None of these yet") }
                     }
-                    Picker("Show", selection: $model.buildsShown) {
-                        Text("Main and Branches").tag(BuildsShown.both)
-                        Text("Main Only").tag(BuildsShown.main)
-                        Text("Branches Only").tag(BuildsShown.branches)
-                    }
+                    Toggle("Show Branch Builds", isOn: $model.showBranches)
                 }
                 Divider()
                 if let download = model.newestDownload {

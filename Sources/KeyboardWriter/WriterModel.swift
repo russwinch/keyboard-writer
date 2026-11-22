@@ -28,21 +28,30 @@ final class WriterModel: ObservableObject {
     @Published private(set) var keyboard: Keyboard
     /// Names of the devices to flash (all of them unless some are clicked off).
     @Published private(set) var selected: Set<String>
-    @Published var reset = false
-    @Published var source: Source?
+    /// Turned on by itself when the firmware has a settings reset due (and
+    /// off again when it no longer has), but the person has the last word.
+    @Published var reset = false { didSet { resetIsForBuild = false } }
+    private var resetIsForBuild = false
+    @Published var source: Source? { didSet { checkResets() } }
+    /// The reset tags the chosen build contains that a selected device hasn't had.
+    @Published private(set) var resetsDue: [ResetTag] = []
+    private var resetTags: [ResetTag] = []
+    private var contained: [String: Bool] = [:]
+    private var resetCheck: Task<Void, Never>?
     /// The config repo's builds, newest first (empty until they have loaded).
     @Published private(set) var builds: [Build] = []
     @Published private(set) var buildsProblem: String?
     @Published private(set) var loadingBuilds = false
-    /// Remembered between launches; changing it picks the newest build it shows.
-    @Published var buildsShown = BuildsShown(rawValue: UserDefaults.standard.string(forKey: "buildsShown") ?? "") ?? .both {
+    /// Whether the list offers branches' builds as well as main's. Remembered
+    /// between launches; changing it picks the newest build it shows.
+    @Published var showBranches = UserDefaults.standard.object(forKey: "showBranches") as? Bool ?? true {
         didSet {
-            UserDefaults.standard.set(buildsShown.rawValue, forKey: "buildsShown")
+            UserDefaults.standard.set(showBranches, forKey: "showBranches")
             pickNewestBuild()
         }
     }
     /// The builds the list offers, newest first.
-    var shownBuilds: [Build] { buildsShown.filter(builds) }
+    var shownBuilds: [Build] { Builds.shown(builds, branches: showBranches) }
 
     @Published private(set) var phase: Phase = .setup
     @Published private(set) var plan: [Step] = []
@@ -122,6 +131,7 @@ final class WriterModel: ObservableObject {
     func choose(_ keyboard: Keyboard) {
         self.keyboard = keyboard
         selected = Set(keyboard.devices.map(\.name))
+        checkResets()
     }
 
     func toggle(_ device: Device) {
@@ -130,6 +140,7 @@ final class WriterModel: ObservableObject {
         } else {
             selected.insert(device.name)
         }
+        checkResets()
     }
 
     var canStart: Bool { source != nil && !selected.isEmpty && !updating }
@@ -141,8 +152,8 @@ final class WriterModel: ObservableObject {
 
     var newestDownload: URL? { Firmware.newestDownload() }
 
-    /// Asks the config repo for its builds. Until the person chooses
-    /// something themselves, the newest build from main is the one used.
+    /// Asks the config repo for its builds and reset tags. Until the person
+    /// chooses something themselves, the newest build shown is the one used.
     /// A refresh also moves on to the newest build, unless a file was chosen.
     func loadBuilds(refresh: Bool = false) {
         guard !loadingBuilds else { return }
@@ -153,7 +164,10 @@ final class WriterModel: ObservableObject {
             do {
                 builds = try await Builds.list(repo: repo)
                 buildsProblem = nil
-                if sourceIsDefault, let build = Builds.preferred(shownBuilds) {
+                // Without them nothing is due, as before there were any.
+                if let tags = try? await Builds.resetTags(repo: repo) { resetTags = tags }
+                checkResets()
+                if sourceIsDefault, let build = shownBuilds.first {
                     source = .build(build)
                 } else if refresh {
                     pickNewestBuild()
@@ -164,10 +178,68 @@ final class WriterModel: ObservableObject {
         }
     }
 
-    /// The newest shown build (from main, if it shows any), unless the firmware is a file.
+    /// The newest shown build, unless the firmware is a file.
     private func pickNewestBuild() {
         if case .file? = source, !sourceIsDefault { return }
-        if let build = Builds.preferred(shownBuilds) { source = .build(build) }
+        if let build = shownBuilds.first { source = .build(build) }
+    }
+
+    // MARK: Settings resets due
+
+    /// The reset tags a device has had, remembered between launches.
+    private func resetsDone(_ device: Device) -> Set<String> {
+        let done = UserDefaults.standard.dictionary(forKey: "resetsDone") as? [String: [String]] ?? [:]
+        return Set(done["\(keyboard.id)/\(device.name)"] ?? [])
+    }
+
+    private func recordResets(_ tags: [ResetTag], for devices: [Device]) {
+        guard !tags.isEmpty else { return }
+        var done = UserDefaults.standard.dictionary(forKey: "resetsDone") as? [String: [String]] ?? [:]
+        for device in devices {
+            let key = "\(keyboard.id)/\(device.name)"
+            done[key] = Array(Set(done[key] ?? []).union(tags.map(\.name))).sorted()
+        }
+        UserDefaults.standard.set(done, forKey: "resetsDone")
+    }
+
+    /// Works out `resetsDue` for the chosen build, asking GitHub whether its
+    /// history has each tag a selected device hasn't had.
+    private func checkResets() {
+        resetCheck?.cancel()
+        let devices = keyboard.devices.filter { selected.contains($0.name) }
+        let tags = resetTags.filter { tag in devices.contains { !resetsDone($0).contains(tag.name) } }
+        guard case .build(let build)? = source, let commit = build.commit, !tags.isEmpty else {
+            return showResets([])
+        }
+        let repo = repo
+        resetCheck = Task {
+            var due: [ResetTag] = []
+            for tag in tags {
+                let key = "\(tag.commit)...\(commit)"
+                if contained[key] == nil {
+                    // A failed check counts as not due, and is asked again next time.
+                    guard let answer = try? await Builds.contains(tag.commit, build: commit, repo: repo) else { continue }
+                    contained[key] = answer
+                }
+                if contained[key] == true { due.append(tag) }
+            }
+            guard !Task.isCancelled else { return }
+            showResets(due)
+        }
+    }
+
+    private func showResets(_ due: [ResetTag]) {
+        let changed = due != resetsDue
+        resetsDue = due
+        if !due.isEmpty {
+            // Only when it changes, so turning it off sticks.
+            if changed {
+                reset = true
+                resetIsForBuild = true
+            }
+        } else if resetIsForBuild {
+            reset = false
+        }
     }
 
     func chooseFile() {
@@ -241,6 +313,7 @@ final class WriterModel: ObservableObject {
     func start() {
         guard let source, canStart else { return }
         let keyboard = keyboard, selected = selected, reset = reset
+        resetsFlashed = reset ? resetsDue : []
         plan = []
         current = 0
         phase = .preparing
@@ -279,6 +352,9 @@ final class WriterModel: ObservableObject {
         phase = .setup
     }
 
+    /// The reset tags the flash under way clears, recorded once it finishes.
+    private var resetsFlashed: [ResetTag] = []
+
     private func run(from first: Int) async {
         phase = .flashing
         do {
@@ -292,6 +368,10 @@ final class WriterModel: ObservableObject {
                 ) { [weak self] status in
                     await self?.update(status)
                 }
+            }
+            // Pretend drives (tests) leave this Mac's record alone.
+            if !pretendDrives {
+                recordResets(resetsFlashed, for: plan.filter { $0.kind == .settingsReset }.map(\.device))
             }
             phase = .finished
         } catch is CancellationError {

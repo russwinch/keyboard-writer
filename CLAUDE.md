@@ -27,7 +27,11 @@
   by the `release` job in its `.github/workflows/build.yml`. `Builds.swift`
   relies on that job's conventions: one `.zip` of `.uf2` files per release,
   the release name is what the list shows (after the build number from its
-  `build-<number>` tag), branches other than `main` are prereleases.
+  `build-<number>` tag), branches other than `main` are prereleases, and the
+  release's target is the commit it was built from (for the
+  `settings-reset/<why>` tags: a build wants a reset when GitHub's compare
+  says the tagged commit is in its history; which devices have had which
+  reset is remembered per Mac in UserDefaults, `resetsDone`).
 - The ZMK module (`firmware/`, `zephyr/module.yml`) is pulled into the config
   repo by `config/west.yml` there; a module change only reaches a keyboard
   once that repo builds with it.
@@ -37,7 +41,8 @@
 - Not yet tried on a real keyboard: the USB conversation between the app and
   the module has only been run in CI against pretend drives. Of the builds
   feature, CI shows the real list being fetched (the smoke run's first
-  screenshot) but never downloads a build. Say so plainly if asked how tested
+  screenshot) but never downloads a build. The settings-reset tags: the parsing is
+  unit-tested, but no run has yet seen a tag turn the switch on. Say so plainly if asked how tested
   it is.
 - The app's self-update has never replaced and relaunched a real app: the
   swap and the unzip are unit-tested on stand-in bundles, and the smoke run
