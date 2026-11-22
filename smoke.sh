@@ -48,6 +48,17 @@ setup=$!
 sleep 4
 shot 1-setup
 kill $setup
+# TEMP diagnostics
+"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset --leave-out right &
+setup=$!
+sleep 12
+shot 1b-setup-12s
+kill $setup
+"$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset &
+setup=$!
+sleep 4
+shot 1c-setup-all
+kill $setup
 
 "$app" --firmware "$work/firmware.zip" --volumes "$work/volumes" --keyboard waterfowl-dongle --reset --start &
 run=$!
