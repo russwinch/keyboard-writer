@@ -74,7 +74,6 @@ final class WriterModel: ObservableObject {
         targets = Self.loadTargets()
         keyboard = targets.keyboards[0]
         selected = Set(targets.keyboards[0].devices.map(\.name))
-        source = Firmware.newestDownload().map(Source.file)
         readArguments()
         if sourceIsDefault { loadBuilds() }
         checkForUpdate()
@@ -149,8 +148,6 @@ final class WriterModel: ObservableObject {
         self.source = source
         sourceIsDefault = false
     }
-
-    var newestDownload: URL? { Firmware.newestDownload() }
 
     /// Asks the config repo for its builds and reset tags. Until the person
     /// chooses something themselves, the newest build shown is the one used.

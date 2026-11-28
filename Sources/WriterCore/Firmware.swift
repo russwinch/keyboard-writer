@@ -108,16 +108,6 @@ public enum Firmware {
         return found.sorted { $0.path < $1.path }
     }
 
-    /// Newest firmware*.zip in ~/Downloads (where the browser puts the CI artifact).
-    public static func newestDownload(in folder: URL? = nil) -> URL? {
-        let folder = folder ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
-        let files = (try? FileManager.default.contentsOfDirectory(
-            at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
-        return files
-            .filter { $0.lastPathComponent.hasPrefix("firmware") && $0.pathExtension.lowercased() == "zip" }
-            .max { modified($0) < modified($1) }
-    }
-
     public static func modified(_ file: URL) -> Date {
         (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
     }

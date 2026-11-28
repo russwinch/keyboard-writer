@@ -39,8 +39,7 @@ Pick the keyboard, click a device to leave it out, and press Start.
 The firmware is the newest build in the config repo, fetched when you press
 Start. "Choose…" lists the recent builds; "Show Branch Builds" there decides
 whether that's every branch's or only `main`'s, and the newest of those is the
-one picked. It also takes a zip or a folder of `.uf2` files from this Mac. With no builds to
-offer (or no network) it uses the newest `firmware*.zip` in `~/Downloads`.
+one picked. It also takes a zip or a folder of `.uf2` files from this Mac.
 The button beside "Choose…" checks for builds published since the app opened.
 See "Builds from the config repo" below for the config repo's side of this.
 

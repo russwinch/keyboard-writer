@@ -146,16 +146,6 @@ final class WriterCoreTests: XCTestCase {
         }
     }
 
-    func testNewestDownload() throws {
-        for (name, age) in [("firmware.zip", 300.0), ("firmware (2).zip", 100.0), ("other.zip", 0.0)] {
-            let file = scratch.appendingPathComponent(name)
-            try Data().write(to: file)
-            try FileManager.default.setAttributes(
-                [.modificationDate: Date().addingTimeInterval(-age)], ofItemAtPath: file.path)
-        }
-        XCTAssertEqual(Firmware.newestDownload(in: scratch)?.lastPathComponent, "firmware (2).zip")
-    }
-
     func testFlashCopiesOntoTheDrive() async throws {
         let step = try Firmware.plan(keyboard: keyboard("waterfowl"), only: ["left"], reset: false, files: firmwareFolder())[0]
         let volumes = scratch.appendingPathComponent("volumes")

@@ -174,9 +174,6 @@ struct FirmwareRow: View {
                     Toggle("Show Branch Builds", isOn: $model.showBranches)
                 }
                 Divider()
-                if let download = model.newestDownload {
-                    Button(verbatim("\(download.lastPathComponent) in Downloads")) { model.use(.file(download)) }
-                }
                 Button("Choose a File…") { model.chooseFile() }
             }
             .fixedSize()
