@@ -396,6 +396,7 @@ struct FinishedView: View {
             Spacer(minLength: 0)
             Text("All done")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
+            FirmwareLine()
             if model.reset {
                 Text("Pairings were cleared. Forget the keyboard in this Mac's Bluetooth settings, then pair it again.")
                     .foregroundStyle(.secondary)
